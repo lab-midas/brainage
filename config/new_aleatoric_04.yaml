@@ -1,0 +1,33 @@
+b_dropout: true
+b_heteroscedastic: false
+base_folder: /mnt/share/raheppt1/project_data/brain/ADNI/ADNI_T1
+batch_size: 8
+beta_1: 0.9
+beta_2: 0.999
+checkpoint_dir: /mnt/share/raheppt1/tf_models/age/keras
+file_ext: .nii.gz
+file_prefix: fcmnorm_brain_mni_ADNI_
+file_suffix: _T1
+image_size:
+- 100
+- 120
+- 100
+image_spacing:
+- 1.5
+- 1.5
+- 1.5
+lambda_l2: 5.0e-05
+learning_rate: 0.001
+logroot_dir: ./logs/keras/
+loss_type: negloglik
+max_epochs: 3000
+path_info_csv: /mnt/share/raheppt1/project_data/brain/ADNI/config/ADNI_age_only.csv
+path_test_csv: '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_NL/NL_ADNI_T1_test_split.csv '
+path_training_csv: /mnt/share/raheppt1/project_data/brain/ADNI/config/GR_NL/NL_ADNI_T1_train_split0.csv
+path_validation_csv: /mnt/share/raheppt1/project_data/brain/ADNI/config/GR_NL/NL_ADNI_T1_val_split0.csv
+quantiles:
+- 0.5
+- 0.25
+- 0.75
+run_name: new_aleatoric_04
+shuffle_buffer_size: 32

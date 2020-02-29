@@ -1,0 +1,19 @@
+b_dropout: false
+batch_size: 16
+beta_1: 0.9
+beta_2: 0.999
+checkpoint_dir: /mnt/share/raheppt1/tf_models/age/keras
+image_size:
+- 100
+- 120
+- 100
+image_spacing:
+- 1.5
+- 1.5
+- 1.5
+lambda_l2: 0.0
+learning_rate: 0.001
+logroot_dir: ./logs/keras/
+max_epochs: 3000
+run_name: new_siamese_01
+shuffle_buffer_size: 32

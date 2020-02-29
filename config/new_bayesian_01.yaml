@@ -1,0 +1,22 @@
+b_dropout: true
+b_flipout: false
+b_heteroscedastic: false
+batch_size: 8
+beta_1: 0.9
+beta_2: 0.999
+checkpoint_dir: /mnt/share/raheppt1/tf_models/age/keras
+image_size:
+- 100
+- 120
+- 100
+image_spacing:
+- 1.5
+- 1.5
+- 1.5
+lambda_l2: 5.0e-05
+learning_rate: 0.0001
+logroot_dir: ./logs/keras/
+loss_scaling: all
+max_epochs: 3000
+prior_scale: 1.0
+run_name: new_bayesian_01

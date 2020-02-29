@@ -1,0 +1,33 @@
+b_dropout: true
+b_heteroscedastic: true
+base_folder: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/PP_IXIT1
+batch_size: 8
+beta_1: 0.9
+beta_2: 0.999
+checkpoint_dir: /mnt/share/raheppt1/tf_models/age/keras
+file_ext: .nii.gz
+file_prefix: fcmnorm_brain_mni_IXI
+file_suffix: _T1_restore
+image_size:
+- 100
+- 120
+- 100
+image_spacing:
+- 1.5
+- 1.5
+- 1.5
+lambda_l2: 5.0e-05
+learning_rate: 0.0001
+logroot_dir: ./logs/keras/
+loss_type: negloglik
+max_epochs: 3000
+path_info_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_age.csv
+path_test_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_test.csv
+path_training_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_train_split0.csv
+path_validation_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_val_split0.csv
+quantiles:
+- 0.5
+- 0.25
+- 0.75
+run_name: new_aleatoric_05
+shuffle_buffer_size: 32
