@@ -9,7 +9,27 @@ from dataset import AgeData
 
 from deprecated.convnet import ConvNet3D
 from models.metrics import mean_absolute_error
-import misc.utils
+
+from torch.utils.tensorboard import SummaryWriter
+
+def init_tensorboard(praefix):
+    """
+    Create tensoboard summary writer in logdir
+     .logs/<praefix>log<timestamp>
+    Args:
+        praefix:
+
+    Returns:
+
+    """
+
+    import datetime
+    log_dir = Path('./logs/tf')
+    ts = datetime.datetime.now().timestamp()
+    readable = datetime.datetime.fromtimestamp(ts).isoformat()
+    log_dir = str(log_dir.joinpath(praefix+'log_' + readable))
+    writer = SummaryWriter(log_dir)
+    return writer
 
 
 class AugmentedDataset(Dataset):
@@ -85,7 +105,7 @@ class TorchTrain3d:
         self.scheduler = StepLR(self.optimizer, step_size=1, gamma=self.gamma_decay)
 
         # Initialize tensorboard writer.
-        self.writer = misc.utils.init_tensorboard('30d_' + self.run_name + '_')
+        self.writer = init_tensorboard('30d_' + self.run_name + '_')
 
     @staticmethod
     def _extract_tensors(sample):

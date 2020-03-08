@@ -1,0 +1,15 @@
+# local package
+# -e .
+
+# external requirements
+tensorflow-gpu
+tensorflow-probability
+tensorflow-addons
+matplotlib
+pyyaml
+SimpleITK
+scikit-image
+python-dotenv
+pandas
+scikit-learn
+tensorboard

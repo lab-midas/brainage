@@ -1,5 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import sys
 import yaml
@@ -11,23 +14,26 @@ from pathlib import Path
 # Tested with tensorflow-gpu 2.0.0
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.optimizers import Adma, SGD
+from tensorflow.keras.optimizers import Adam, SGD
 
-from dataset import AgeData
-from models.models3d import age_regression
-from misc.utils import init_gpu
+import keras_model_regression
+from brainage.io.dataset import AgeData
+from brainage.misc.utils import init_gpu, add_dataset_config
 
 
 def create_config(save_path=None):
 
+    log_dir = os.getenv("LOG_DIR")
+    model_dir = os.getenv("MODEL_DIR")
+
     config_dict = {
         # General parameters
-        'run_name': 'ADNI_ADNL_quantile_01',
+        'run_name': 'IXI_aleatoric',
         'image_size': [100, 120, 100],
         'image_spacing': [1.5, 1.5, 1.5],
-        # Loss
-        'loss_type': 'quantile',
-        'b_heteroscedastic': False,
+        # Loss (negloglik, quantile)
+        'loss_type': 'negloglik',
+        'b_heteroscedastic': True,
         'quantiles': [0.5, 0.25, 0.75],
         # Training parameters
         'batch_size': 8,
@@ -44,12 +50,14 @@ def create_config(save_path=None):
         'adam_beta_1': 0.9,
         'adam_beta_2': 0.999,
         # Regularization
-        'lambda_l2': 0.00005,
-        'b_dropout': True,
+        'lambda_l2': 0.0,  # 00005
+        'dropout': True,
+        'spatial_dropout': False,
+        'dropout_rate': 0.5,
         # Checkpoint/Tensoboard paths
-        'logroot_dir': './logs/keras/',
-        'checkpoint_dir': '/mnt/share/raheppt1/tf_models/age/keras',
-        # Dataset paths
+        'logroot_dir': log_dir,
+        'checkpoint_dir': model_dir,
+        # # Dataset paths
         # IXI
         #'base_folder': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/PP_IXIT1',
         #'file_prefix': 'fcmnorm_brain_mni_IXI',
@@ -59,15 +67,15 @@ def create_config(save_path=None):
         #'path_validation_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_val_split0.csv',
         #'path_test_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_test.csv',
         #'path_info_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_age.csv',
-        # ADNI
-        'base_folder': '/mnt/share/raheppt1/project_data/brain/ADNI/ADNI_T1',
-        'file_prefix': 'fcmnorm_brain_mni_ADNI_',
-        'file_suffix': '_T1',
-        'file_ext': '.nii.gz',
-        'path_training_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_ADNL/ADNL_ADNI_T1_train_split0.csv',
-        'path_validation_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_ADNL/ADNL_ADNI_T1_val_split0.csv',
-        'path_test_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_NL/NL_ADNI_T1_test_split.csv ',
-        'path_info_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/ADNI_age_only.csv',
+        # # ADNI
+        # 'base_folder': '/mnt/share/raheppt1/project_data/brain/ADNI/ADNI_T1',
+        # 'file_prefix': 'fcmnorm_brain_mni_ADNI_',
+        # 'file_suffix': '_T1',
+        # 'file_ext': '.nii.gz',
+        # 'path_training_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_ADNL/ADNL_ADNI_T1_train_split0.csv',
+        # 'path_validation_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_ADNL/ADNL_ADNI_T1_val_split0.csv',
+        # 'path_test_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/GR_NL/NL_ADNI_T1_test_split.csv ',
+        # 'path_info_csv': '/mnt/share/raheppt1/project_data/brain/ADNI/config/ADNI_age_only.csv',
 
         # Data augmentation
         'default_processing': False,
@@ -84,11 +92,18 @@ def create_config(save_path=None):
         'augmentation_flip':        [0.5, 0.0, 0.0],
         'augmentation_scale':       [0.1, 0.1, 0.1],
         'augmentation_translation': [10.0, 10.0, 10.0],
-        'augmentation_random':      [0.1, 0.1, 0.1]
+        'augmentation_rotation':    [0.1, 0.1, 0.1]
     }
 
+    # Define dataset paths.
+    config_dict = add_dataset_config(config_dict,
+                                     dataset='IXI',
+                                     split='0',
+                                     ADNI_test_selection='split',
+                                     ADNI_group='NL')
+
     if not save_path:
-        save_path = './config/' + config_dict['run_name'] + '.yaml'
+        save_path = '../../config/' + config_dict['run_name'] + '.yaml'
 
     with open(save_path, 'w') as f:
         yaml.dump(config_dict, f)
@@ -102,21 +117,27 @@ def train_model(config):
     image_size = config['image_size']
     image_spacing = config['image_spacing']
 
+    # Model parameters
     loss_type = config['loss_type']
     b_heteroscedastic = config['b_heteroscedastic']
     quantiles = config['quantiles']
+    lambda_l2 = config['lambda_l2']
+    dropout = config['dropout']
+    spatial_dropout = config['spatial_dropout']
+    dropout_rate = config['dropout_rate']
 
     # Training and model parameters
     batch_size = config['batch_size']
     max_epochs = config['max_epochs']
     learning_rate = config['learning_rate']
+    lr_decay = config['lr_decay']
+    lr_decay_factor = config['lr_decay_factor']
+    lr_decay_start_epoch = config['lr_decay_start_epoch']
+    sel_optim = config['sel_optimizer']
+    sgd_momentum = config['sgd_momentum']
+    sgd_nesterov = config['sgd_nesterov']
     adam_beta_1 = config['adam_beta_1']
     adam_beta_2 = config['adam_beta_2']
-    shuffle_buffer_size = config['shuffle_buffer_size']
-
-    # Regularization
-    lambda_l2 = config['lambda_l2']
-    b_dropout = config['b_dropout']
 
     # Checkpoint/Tensorboard paths
     logroot_dir = Path(config['logroot_dir'])
@@ -188,7 +209,6 @@ def train_model(config):
                                                      verbose=1)
 
     # Define metrics and loss.
-
     def mse(y_true, y_pred):
         return tf.losses.MSE(tf.squeeze(y_true[:, 0]),
                              tf.squeeze(y_pred[:, 0]))
@@ -210,7 +230,7 @@ def train_model(config):
                 losses.append(loss)
             return tf.reduce_mean(tf.add_n(losses))
 
-        # Neglog-likelihood loss for gaussian likelihood.
+        # Neglog-likelihood loss for a gaussian likelihood.
         def loss_nloglik(y_true, y_pred):
             if b_heteroscedastic:
                 log_sigma2 = y_pred[:, 1]
@@ -264,15 +284,18 @@ def train_model(config):
         else:
             n_outputs = 1
 
-    simple_model = age_regression.build_simple_model(image_size + [1],
-                                                     lambda_l2=lambda_l2,
-                                                     dropout=b_dropout,
-                                                     outputs=n_outputs)
+    simple_model = keras_model_regression.build_simple_model(image_size + [1],
+                                                             lambda_l2=lambda_l2,
+                                                             dropout=dropout,
+                                                             spatial_dropout=spatial_dropout,
+                                                             dropout_rate=dropout_rate,
+                                                             outputs=n_outputs)
 
     simple_model.compile(loss=get_loss(),
                          optimizer=sel_optimizer,
                          metrics=[mse, mae])
     print(simple_model.summary())
+
 
     # Train the model.
     simple_model.fit(ds_train,
@@ -280,7 +303,7 @@ def train_model(config):
                      verbose=1,
                      validation_data=ds_val,
                      steps_per_epoch=train_samples // batch_size + 1,
-                     validation_steps=val_samples // batch_size + 1,
+                     validation_steps=val_samples // batch_size+ 1,
                      callbacks=[tensorboard_callback,
                                 cp_callback,
                                 lr_callback])
@@ -294,6 +317,7 @@ if __name__ == '__main__':
     parser.add_argument('--default', action='store_true')
     args = parser.parse_args()
 
+    # Create config dict, is --cfg ist defined load yaml config file.
     if not args.cfg:
         config = create_config(args.cfg)
     else:

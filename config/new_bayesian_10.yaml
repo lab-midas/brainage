@@ -16,13 +16,12 @@ augmentation_translation:
 - 10.0
 - 10.0
 - 10.0
+b_flipout: false
 b_heteroscedastic: false
 base_folder: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/PP_IXIT1
 batch_size: 8
 checkpoint_dir: /mnt/share/raheppt1/tf_models/age/keras
 default_processing: false
-dropout: true
-dropout_rate: 0.5
 file_ext: .nii.gz
 file_prefix: fcmnorm_brain_mni_IXI
 file_suffix: _T1_restore
@@ -34,10 +33,9 @@ image_spacing:
 - 1.5
 - 1.5
 - 1.5
-lambda_l2: 5.0e-05
+kl_scaling: 0.0001
 learning_rate: 0.0001
 logroot_dir: ./logs/keras/
-loss_type: quantile
 lr_decay: true
 lr_decay_factor: 0.1
 lr_decay_start_epoch: 10
@@ -46,15 +44,11 @@ path_info_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_a
 path_test_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_test.csv
 path_training_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_train_split0.csv
 path_validation_csv: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_val_split0.csv
-quantiles:
-- 0.5
-- 0.25
-- 0.75
-run_name: ADNI_ADNL_quantile_01
+prior_scale: 1.0
+run_name: new_bayesian_10
 sel_optimizer: Adam
 sgd_momentum: 0.0
 sgd_nesterov: false
-spatial_dropout: false
 train_intensity_clamp_max: 2.0
 train_intensity_clamp_min: 0.0
 train_intensity_random_scale: 0.4

@@ -1,18 +1,17 @@
-import sys
-sys.path.insert(0, '/mnt/home/raheppt1/projects/MedicalDataAugmentationTool')
+#import sys
+#sys.path.insert(0, '/home/raheppt1/projects/MedicalDataAugmentationTool')
 
 import os
 import SimpleITK as sitk
 
 from datasets.graph_dataset import GraphDataset
-from datasources.cached_image_datasource import CachedImageDataSource
-from datasources.label_datasource import LabelDatasource
-from generators.image_generator import ImageGenerator
-from generators.label_generator import LabelGenerator
-from iterators.id_list_iterator import IdListIterator
-from transformations.intensity.sitk.shift_scale_clamp import ShiftScaleClamp
 from transformations.spatial import translation, rotation, scale, flip, composite
-
+from transformations.intensity.sitk.shift_scale_clamp import ShiftScaleClamp
+from iterators.id_list_iterator import IdListIterator
+from generators.label_generator import LabelGenerator
+from generators.image_generator import ImageGenerator
+from datasources.label_datasource import LabelDatasource
+from datasources.cached_image_datasource import CachedImageDataSource
 
 class AgeData(object):
     def __init__(self,
@@ -26,6 +25,9 @@ class AgeData(object):
                  select_testset=False,
                  default_processing=True):
         
+        print(select_testset)
+        print(config['path_validation_csv'])
+
         # Image parameters
         self.dim = 3
         self.image_size = config['image_size']
@@ -33,7 +35,7 @@ class AgeData(object):
         self.shuffle_images = shuffle_training_images
 
         # Save debug images.
-        self.save_debug_images = 'True'
+        self.save_debug_images = save_debug_images
         self.output_folder = './'
 
         # Define data directory.
@@ -82,7 +84,7 @@ class AgeData(object):
             self.augmentation_flip = config['augmentation_flip']
             self.augmentation_scale = config['augmentation_scale']
             self.augmentation_translation = config['augmentation_translation']
-            self.augmentation_random = config['augmentation_random']
+            self.augmentation_rotation = config['augmentation_rotation']
 
     def set_default_processing(self):
         self.train_intensity_shift = 0.0
@@ -100,7 +102,7 @@ class AgeData(object):
         self.augmentation_flip = [0.5, 0.0, 0.0]
         self.augmentation_scale = [0.1, 0.1, 0.1]
         self.augmentation_translation = [10.0, 10.0, 10.0]
-        self.augmentation_random = [0.1, 0.1, 0.1]
+        self.augmentation_rotation = [0.1, 0.1, 0.1]
 
     def crop_pad(self, image):
         image = sitk.Crop(image, [0, 0, 0], [0, 0, 0])
@@ -159,9 +161,9 @@ class AgeData(object):
             transformation_list.append(translation.Random(
                 self.dim, self.augmentation_translation))
 
-        if self.augmentation_random:
+        if self.augmentation_rotation:
             transformation_list.append(rotation.Random(
-                self.dim, self.augmentation_random))
+                self.dim, self.augmentation_rotation))
 
         transformation_list.append(translation.OriginToOutputCenter(self.dim,
                                                                     self.image_size,
@@ -184,11 +186,14 @@ class AgeData(object):
                                debug_image_type='gallery')
         return dataset
 
+
     def dataset_val(self):
         # Define validation images.
         # csv "<id>, <subj>" -> OrderedDict ('image_id', '<id>'), ('unique_id', '<id><subj>')]
+        print(self.path_validation_csv)
         iterator = IdListIterator(self.path_validation_csv)
-
+ 
+        # Load image and label data.
         sources = self.datasources(self.base_folder, self.path_info_csv, iterator)
 
         transformation = composite.Composite(self.dim, [translation.InputCenterToOrigin(self.dim),

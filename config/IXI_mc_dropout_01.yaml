@@ -19,10 +19,10 @@ augmentation_translation:
 b_heteroscedastic: false
 base_folder: /mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/PP_IXIT1
 batch_size: 8
-checkpoint_dir: /mnt/share/raheppt1/tf_models/age/keras
+checkpoint_dir: /mnt/share/raheppt1/tf_models/brainage/keras
 default_processing: false
 dropout: true
-dropout_rate: 0.5
+dropout_rate: 0.2
 file_ext: .nii.gz
 file_prefix: fcmnorm_brain_mni_IXI
 file_suffix: _T1_restore
@@ -36,8 +36,8 @@ image_spacing:
 - 1.5
 lambda_l2: 5.0e-05
 learning_rate: 0.0001
-logroot_dir: ./logs/keras/
-loss_type: quantile
+logroot_dir: /mnt/share/raheppt1/logs/brainage
+loss_type: negloglik
 lr_decay: true
 lr_decay_factor: 0.1
 lr_decay_start_epoch: 10
@@ -50,11 +50,11 @@ quantiles:
 - 0.5
 - 0.25
 - 0.75
-run_name: ADNI_ADNL_quantile_01
+run_name: IXI_mc_dropout_01
 sel_optimizer: Adam
 sgd_momentum: 0.0
 sgd_nesterov: false
-spatial_dropout: false
+spatial_dropout: true
 train_intensity_clamp_max: 2.0
 train_intensity_clamp_min: 0.0
 train_intensity_random_scale: 0.4

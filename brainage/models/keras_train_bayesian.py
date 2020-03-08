@@ -4,6 +4,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from tensorflow.python.framework.ops import disable_eager_execution, enable_eager_execution
 disable_eager_execution()
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import sys
 import yaml
@@ -18,22 +21,26 @@ import tensorflow_probability as tfp
 from tensorflow import keras
 from tensorflow.keras.optimizers import Adam, SGD
 
-from dataset import AgeData
-from models.models3d import age_regression
-from misc.utils import init_gpu
+from brainage.io.dataset import AgeData
+from brainage.models.keras_model_regression import build_bayesian_model 
+from brainage.misc.utils import init_gpu, add_dataset_config
 
 
 def create_config(save_path=None):
 
+    log_dir = os.getenv("LOG_DIR")
+    model_dir = os.getenv("MODEL_DIR")
+
     config_dict = {
         # General parameters
-        'run_name': 'new_bayesian_08',
+        'run_name': 'ADNI_NL_bayesian',
         'image_size': [100, 120, 100],
         'image_spacing': [1.5, 1.5, 1.5],
         # Loss
         'kl_scaling': 0.001,
         'prior_scale': 1.0,
         'b_flipout': False,
+        'deterministic_conv': False,
         'b_heteroscedastic': False,
         # Training & model parameters
         'batch_size': 8,
@@ -51,17 +58,8 @@ def create_config(save_path=None):
         'adam_beta_2': 0.999,
        
         # Checkpoint/Tensoboard paths
-        'logroot_dir': './logs/keras/',
-        'checkpoint_dir': '/mnt/share/raheppt1/tf_models/age/keras',
-        # Dataset paths
-        'base_folder': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/PP_IXIT1',
-        'file_prefix': 'fcmnorm_brain_mni_IXI',
-        'file_suffix': '_T1_restore',
-        'file_ext': '.nii.gz',
-        'path_training_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_train_split0.csv',
-        'path_validation_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_val_split0.csv',
-        'path_test_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_test.csv',
-        'path_info_csv': '/mnt/share/raheppt1/project_data/brain/IXI/IXI_T1/config/IXI_T1_age.csv',
+        'logroot_dir': log_dir,
+        'checkpoint_dir': model_dir,
 
         # Data augmentation
         'default_processing': False,
@@ -78,11 +76,18 @@ def create_config(save_path=None):
         'augmentation_flip':        [0.5, 0.0, 0.0],
         'augmentation_scale':       [0.1, 0.1, 0.1],
         'augmentation_translation': [10.0, 10.0, 10.0],
-        'augmentation_random':      [0.1, 0.1, 0.1]
+        'augmentation_rotation':    [0.1, 0.1, 0.1]
     }
 
+    # Define dataset paths.
+    config_dict = add_dataset_config(config_dict,
+                                     dataset='ADNI',
+                                     split='0',
+                                     ADNI_test_selection='split',
+                                     ADNI_group='NL')
+
     if not save_path:
-        save_path = './config/' + config_dict['run_name'] + '.yaml'
+        save_path = '../../config/' + config_dict['run_name'] + '.yaml'
 
     with open(save_path, 'w') as f:
         yaml.dump(config_dict, f)
@@ -110,6 +115,7 @@ def train_model(config):
     sgd_momentum = config['sgd_momentum']
     sgd_nesterov = config['sgd_nesterov']
     b_flipout = config['b_flipout']
+    deterministic_conv = config['deterministic_conv']
     prior_scale = config['prior_scale']
     adam_beta_1=config['adam_beta_1']
     adam_beta_2=config['adam_beta_2']
@@ -198,13 +204,13 @@ def train_model(config):
     else:
         n_outputs = 1
 
-    bayesian_model = age_regression.build_bayesian_model(image_size + [1],
-                                                         prior=prior,
-                                                         flipout=b_flipout,
-                                                         outputs=n_outputs)
+    bayesian_model = build_bayesian_model(image_size + [1],
+                                          prior=prior,
+                                          flipout=b_flipout,
+                                          deterministic_conv=deterministic_conv,
+                                          outputs=n_outputs)
 
     # Define metrics and loss.
-
     def loss_nloglik(y_true, y_pred):
         if b_heteroscedastic:
             log_sigma2 = y_pred[:, 1]
