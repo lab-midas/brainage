@@ -133,6 +133,8 @@ def train_model(config):
     lr_decay = config['lr_decay']
     lr_decay_factor = config['lr_decay_factor']
     lr_decay_start_epoch = config['lr_decay_start_epoch']
+
+    # Optimizer configuration
     sel_optim = config['sel_optimizer']
     sgd_momentum = config['sgd_momentum']
     sgd_nesterov = config['sgd_nesterov']

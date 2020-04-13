@@ -4,7 +4,7 @@ augmentation_flip:
 - 0.5
 - 0.0
 - 0.0
-augmentation_random:
+augmentation_rotation:
 - 0.1
 - 0.1
 - 0.1

@@ -13,3 +13,4 @@ python-dotenv
 pandas
 scikit-learn
 tensorboard
+python-dotenv

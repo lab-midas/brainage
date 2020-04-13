@@ -1,4 +1,4 @@
-adam_beta_1: 0.9
+  adam_beta_1: 0.9
 adam_beta_2: 0.999
 b_flipout: false
 b_heteroscedastic: false

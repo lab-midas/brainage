@@ -245,35 +245,80 @@ def run_evaluation(model,
 
 
 if __name__ == '__main__':
-
-    # IXI quantile 01
-    #model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/new_quantile_01/model.tf/')
-    #outputs = 3
     
     # IXI simple
+    # report_csv_name = 'test_IXI_simple'
+    # path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_simple.csv'
     # model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/IXI_simple/cp719-4.38.tf')
     # outputs = 1
-    # ADNI simple
-    # model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/ADNI_NL_simple/cp978-4.71.tf')
-    # outputs = 1
+
+    # IXI simple 02
+    #report_csv_name = 'test_IXI_simple_02'
+    #path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_simple.csv'
+    #model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/IXI_simple_02/cp917-4.03.tf')
+    #outputs = 1
+
+    # IXI quantile 01
+    # report_csv_name = 'test_IXI_new_quantile_01'
+    # path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/test_IXI_new_quantile_01.csv'
+    #model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/new_quantile_01/model.tf/')
+    #outputs = 3
+
     # IXI aleatoric (05)
     # model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/new_aleatoric_05/cp730-5.05.tf')
-    # outputs = 2
+    report_csv_name = 'test_IXI_aleatoric'
+    path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_simple.csv'
+    model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/IXI_aleatoric/cp2052-3.26.tf')
+    outputs = 2
     
     # IXI mc dropout 01 
-    report_csv_name = 'test_IXI_mc_dropout_01_b'
-    path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_mcsampling.csv'
+    #report_csv_name = 'test_IXI_mc_dropout_01_b'
+    #path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_mcsampling.csv'
     #model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/IXI_mc_dropout_01/cp494-5.18.tf')
     #outputs = 1
 
     # Bayesian model 
-    report_csv_name = 'test_IXI_bayesian_06_b'
-    path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_mcsampling.csv'
-    model = load_bayesian_model(image_size=[100, 120, 100],
-                                model_path='/mnt/share/raheppt1/tf_models/brainage/keras/new_bayesian_06/',
-                                outputs=1,
-                                flipout=False)
-    outputs=1
+    #report_csv_name = 'test_IXI_bayesian_07'
+    #path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_mcsampling.csv'
+    #model = load_bayesian_model(image_size=[100, 120, 100],
+    #                            model_path='/mnt/share/raheppt1/tf_models/brainage/keras/new_bayesian_07/',
+    #                            outputs=1,
+    #                            flipout=False)
+    #outputs=1
+    
+    # ADNI NL simple
+    # report_csv_name = 'test_ADNI_NL_simple'
+    # path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_simple.csv'
+    # model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/ADNI_NL_simple/cp978-4.71.tf')
+    # outputs = 1
+
+    # ADNI NL aleatoric
+    report_csv_name = 'test_ADNI_NL_aleatoric'
+    path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_simple.csv'
+    model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/ADNI_NL_aleatoric/cp770-5.14.tf')
+    outputs = 2
+
+    # ADNI ADNL quantile
+    #report_csv_name = 'ADNI_ADNL_quantile_01'
+    #path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_simple.csv'
+    #model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/ADNI_ADNL_quantile_01/cp468-4.81.tf')
+    #outputs = 3
+
+    # ADNI - Bayesian 
+    #report_csv_name = 'test_ADNI_bayesian_03'
+    #path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_mcsampling_ADNI.csv'
+    #model = load_bayesian_model(image_size=[100, 120, 100],
+    #                            model_path='/mnt/share/raheppt1/tf_models/brainage/keras/ADNI_NL_bayesian',
+    #                            outputs=1,
+    #                            flipout=False)
+    #outputs = 1 
+
+    # ADNI - MC dropout
+    #report_csv_name = 'test_ADNI_mc_dropout_02'
+    #path_csv_runs = '/home/raheppt1/projects/age_prediction/reports/predictions/run_mcsampling_ADNI.csv'
+    #model = tf.saved_model.load('/mnt/share/raheppt1/tf_models/brainage/keras/ADNI_NL_mc_dropout/cp2100-3.77.tf')
+    #outputs = 1
+
     run_evaluation(model, outputs,
                    path_csv_runs,
                    report_csv_name)
