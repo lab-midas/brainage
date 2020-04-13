@@ -1,4 +1,0 @@
-select_dataset,select_group,select_testset,select_cv_split,select_test_part,set_training_on,mc_samples,augmentation,run_name
-IXI,-,True,0,split,False,1,0,simple_IXI
-ADNI,NL,True,0,split,False,1,0,simple_ADNI_NL
-ADNI,AD,True,0,split,False,1,0,simple_ADNI_AD
