@@ -1,0 +1,10 @@
+torch==1.5.1
+torchvision==0.6.1
+hydra-core==0.11.3 # --upgrade
+pandas==1.0.5
+pyarrow==0.17.1
+python-dotenv==0.14.0
+h5py==2.10.0
+matplotlib==3.2.2
+pytorch-lightning==0.8.5
+wandb==0.9.3
