@@ -22,44 +22,52 @@ class AgeModel2DSlices(pl.LightningModule):
 
     def __init__(self,
                  hparams,   
-                 train_ds,
-                 val_ds):
+                 train_ds=None,
+                 val_ds=None):
         super().__init__()
 
         # copy over
         self.hparams = hparams
-        self.learning_rate = hparams['optimizer']['learning_rate']
-        self.weight_decay = hparams['optimizer']['weight_decay']
-        self.batch_size = hparams['loader']['batch_size'] 
-        self.num_workers = hparams['loader']['num_workers']
-        self.inputs = hparams['model']['inputs']
-        self.outputs = hparams['model']['outputs']
+        cfg = OmegaConf.create(hparams)
+        self.model_name = cfg.model.name
+        self.inputs = cfg.model.inputs or 1
+        self.outputs = cfg.model.outputs or 1
+        self.pretrained = cfg.model.pretrained or False
+
+        self.learning_rate = cfg.optimizer.learning_rate or 1e-4
+        self.weight_decay = cfg.optimizer.weight_decay or 0.0
+        self.batch_size = cfg.loader.batch_size or 64
+        self.num_workers = cfg.loader.num_workers or 4
         
+        #!change
+        self.outputs=24
+
         # load data
         self.train_ds = train_ds
         self.val_ds = val_ds
 
         # define model
-        features = {'resnet18': 512,
-                    'resnet50': 2048}
-
-        self.net = models.resnet18()
-        self.net.conv1 = torch.nn.Conv2d(self.inputs, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        self.net.fc = torch.nn.Linear(in_features=512, out_features=self.outputs, bias=True)
-        #self.net = models.resnet50()
-        #self.net.conv1 = torch.nn.Conv2d(self.inputs, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        #self.net.fc = torch.nn.Linear(in_features=2048, out_features=self.outputs, bias=True)
+        assert self.model_name in ['resnet18', 'resnet50']
+        if self.model_name == 'resnet18':
+            self.net = models.resnet18(pretrained=self.pretrained)
+            self.net.conv1 = torch.nn.Conv2d(self.inputs, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            self.net.fc = torch.nn.Linear(in_features=512, out_features=self.outputs, bias=True)
+        elif self.model_name == 'resnet50':
+            self.net = models.resnet50(pretrained=self.pretrained)
+            self.net.conv1 = torch.nn.Conv2d(self.inputs, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+            self.net.fc = torch.nn.Linear(in_features=2048, out_features=self.outputs, bias=True)
 
     def forward(self, x):
         return self.net(x)
         
     def log_sample_images(self, batch, batch_idxn, n=5):
-        sample = batch['data'].detach().cpu().numpy()
-        label =  batch['label'][0].detach().cpu().numpy()
-        sample = np.transpose(sample, [0,2,3,1])
-        wandb.log({'samples': [wandb.Image(sample[i]*255, 
-                                           caption=f'batch {batch_idxn} age {label[i]}') 
-                                for i in range(n)]})
+        samples = batch['data'].detach().cpu().numpy()
+        labels =  batch['label'][0].detach().cpu().numpy()
+        samples = np.transpose(samples, [0,2,3,1])
+        samples = [wandb.Image(samples[i]*255, 
+                    caption=f'batch {batch_idxn} age {labels[i]}') 
+                    for i in range(n)]
+        wandb.log({'samples': samples})
 
     def training_step(self, batch, batch_idx):
         if self.global_step < 5:
@@ -67,18 +75,21 @@ class AgeModel2DSlices(pl.LightningModule):
 
         x = batch['data'].float()
         y = batch['label'][0].float()
+        y = ((y.clamp(20.0, 80.0)-20.0)//2.5).long()
+
         y_hat = self(x)
-        loss = F.mse_loss(y_hat[:, 0], y)
+        loss = F.cross_entropy(y_hat, y)
+        #loss = F.mse_loss(y_hat[:, 0], y)
         logs = {'train_loss': loss.item()}
         return {'loss': loss, 'log': logs}
 
     def validation_step(self, batch, batch_idx):
         x = batch['data'].float()
         y = batch['label'][0].float()
-        y_hat = self(x)
-        return {'val_loss': F.mse_loss(y_hat[:, 0], y),
-                'mse': F.mse_loss(y_hat[:, 0], y),
-                'mae': F.l1_loss(y_hat[:, 0], y)}
+        y_hat = (torch.argmax(self(x), dim=1)*2.5+20).float()
+        return {'val_loss': F.mse_loss(y_hat, y),
+                'mse': F.mse_loss(y_hat, y), # y_hat[:, 0]
+                'mae': F.l1_loss(y_hat, y)} # y_hat[:, 0]
 
     def validation_epoch_end(self, outputs):
         avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -100,43 +111,41 @@ class AgeModel2DSlices(pl.LightningModule):
         loader = DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, drop_last=True, shuffle=False, pin_memory=True)
         return loader
 
-# TODO pretraining 
-# TODO gradcam
 # TODO aleatoric loss
 # TODO quantile regression
 # TODO data augmentation
-# TODO plot sample images
 # TODO sanity check
 
 @hydra.main(config_path='../../config/config.yaml', strict=False)
 def main(cfg):
     print(cfg.pretty())
     wandb_logger = WandbLogger(name=cfg.project.job,
-                               project=cfg.project.name)
+                               project=cfg.project.name,
+                               log_model=True)
 
+    # get keys and metadata
     with Path(cfg.dataset.train).open('r') as f:
         train_keys = [l.strip() for l in f.readlines()]
-
     with Path(cfg.dataset.val).open('r') as f:
         val_keys = [l.strip() for l in f.readlines()]
-
     info_df = pd.read_feather(cfg.dataset.info)
-    shape = cfg.dataset.shape
-    data = np.memmap(cfg.dataset.data,
-                    mode='r',
-                    dtype=np.float16,
-                    shape=(len(info_df), shape[0], shape[1]))
-    
-    info_df = info_df[(info_df['slice']>70) & (info_df['slice']<90)]
+    info_df = info_df[(info_df['slice']>55) & (info_df['slice']<57)]
     info_train =  info_df[info_df.key.isin(train_keys)]
-    ds_train = SliceDataset(np.array(data[info_train.index]), info_train)
     info_val = info_df[info_df.key.isin(val_keys)]
-    ds_val = SliceDataset(np.array(data[info_val.index]), info_val)
+
+    ds_train = SliceDataset(cfg.dataset.data, 
+                            info=info_train, 
+                            preload=cfg.dataset.preload or False,
+                            zoom=cfg.dataset.zoom)
+    ds_val = SliceDataset(cfg.dataset.data, 
+                          info=info_val, 
+                          preload=cfg.dataset.preload or False,
+                          zoom=cfg.dataset.zoom)
 
     model = AgeModel2DSlices(OmegaConf.to_container(cfg, resolve=True),
                              ds_train, ds_val)
 
-    trainer = Trainer(logger=wandb_logger, 
+    trainer = Trainer(logger=wandb_logger,
                       **OmegaConf.to_container(cfg.trainer))
     trainer.fit(model)  
 
