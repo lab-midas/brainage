@@ -5,24 +5,27 @@ project:
 trainer:
   gpus: 1
   max_epochs: 100
-  val_check_interval: 0.25
+  #default_root_dir: ./wandb
+  #val_check_interval: 0.5
   benchmark: True
 
 model:
+  name: 'resnet18'
   inputs: 1
   outputs: 1
+  pretrained: True
 
 optimizer:
   learning_rate: 1e-4
-  weight_decay: 0
+  weight_decay: 0.0
 
 loader:
   batch_size: 128
   num_workers: 4
 
 dataset:
-  data: /tmp/t1_pp_10_slices_ax2_image.npy
-  info: ${env:DATA}/nako/interim/t1_pp_10_slices_ax2.feather
-  shape: [155, 185]
+  data: ${env:DATA}/nako/interim/t1_pp_15_slices_ax2.h5
+  info: ${env:DATA}/nako/interim/t1_pp_15_slices_ax2.feather
+  preload: True
   train: ${env:DATA}/nako/interim/keys/train0.dat
   val:   ${env:DATA}/nako/interim/keys/test0.dat
