@@ -10,3 +10,4 @@ h5py==2.10.0
 matplotlib==3.2.2
 pytorch-lightning==0.8.5
 wandb==0.9.3
+scikit-image==0.17.2
