@@ -1,11 +1,14 @@
 import os
+from sys import getsizeof
 from pathlib import Path
 
 import torch
+import time
 import h5py
 import dotenv
 import numpy as np
 import pandas as pd
+import scipy.ndimage
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as AbstractDataset
 dotenv.load_dotenv()
@@ -17,6 +20,9 @@ class SliceDataset(AbstractDataset):
                  data,
                  info,
                  labels=['age'],
+                 image_group='image',
+                 preload=True,
+                 zoom=None,
                  transform=None):
         """Dataset of slices drawn from a numpy array. 
 
@@ -26,6 +32,9 @@ class SliceDataset(AbstractDataset):
             data (np.array): Data array (can be memmapped), number of slices x H x W
             info (pandas.DataFrame): Data frame containing the meta information. One row per slice.
             labels (list): Label columns names.
+            image_group (str): Group name of the image datasets. Defaults to 'image'.
+            preload (bool): Preload dataset to memory. Defaults to True.
+            zoom (float): Zoom image. Defaults to None. 
             transform (class, optional): Tranformation per Image. Defaults to None.
         """
 
@@ -36,8 +45,17 @@ class SliceDataset(AbstractDataset):
         self.data = data
         self.labels = labels
         self.transform = transform
-        #hf = h5py.File(self.data, mode='r')
-        #self.ds = hf['image']
+        self.preload = preload
+        self.zoom = zoom
+
+        hf = h5py.File(self.data, mode='r')
+        if self.preload:
+            t0 = time.perf_counter()
+            print('loading data to memory ...')
+            self.ds = hf['image'][self.info.index][:]
+            print(f'finished {self.ds.nbytes/1e6:.2f} MB - {time.perf_counter() - t0:.2f}s ')
+        else:
+            self.ds = hf['image']
 
     def __len__(self):
         return len(self.info)   
@@ -47,7 +65,11 @@ class SliceDataset(AbstractDataset):
         key = self.info.iloc[i]['key']
         sl = self.info.iloc[i]['slice']
         pos = self.info.iloc[i].name
-        img = np.copy(self.data[pos])
+        img = self.ds[i] if self.preload else self.ds[pos]
+        img = img.astype(np.float32)
+        if self.zoom:
+            img = scipy.ndimage.zoom(img, self.zoom)
+
         sample = {'data':  img[np.newaxis, np.newaxis, :, :],
                   'label': self.info.iloc[i][self.labels].tolist(),
                   'slice': sl,
