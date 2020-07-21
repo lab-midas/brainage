@@ -1,6 +1,10 @@
+hydra:
+  run:
+    dir: ${env:OUT}/${project.name}/${project.job}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
 project:
-  name: my-project
-  job: Adam-32-0.001
+  name: brainage
+  job: 2d_slices
 
 trainer:
   gpus: 1
@@ -12,8 +16,13 @@ trainer:
 model:
   name: 'resnet18'
   inputs: 1
-  outputs: 1
+  outputs: 2
   pretrained: True
+  loss: 'l2'
+  heteroscedastic: True
+  position: True
+  #label_range: [20, 80]
+  #label_step: 2.5
 
 optimizer:
   learning_rate: 1e-4
@@ -26,6 +35,9 @@ loader:
 dataset:
   data: ${env:DATA}/nako/interim/t1_pp_15_slices_ax2.h5
   info: ${env:DATA}/nako/interim/t1_pp_15_slices_ax2.feather
-  preload: True
+  preload: False
+  slicing: 'range' 
+  slices: [40,80,2]
+  zoom: 3.0
   train: ${env:DATA}/nako/interim/keys/train0.dat
   val:   ${env:DATA}/nako/interim/keys/test0.dat
