@@ -28,7 +28,7 @@ from dl_downstream_tasks.dataset import BrainDataset, BrainPatchDataset
 from dl_downstream_tasks.utils import _LOG_LEVEL_STRINGS, _log_level_string_to_int
 from dl_downstream_tasks.models.resnet3d import generate_model
 
-
+# TODO 
 class AgeModel(pl.LightningModule):
 
     def __init__(self,
