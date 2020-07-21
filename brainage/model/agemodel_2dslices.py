@@ -18,6 +18,8 @@ dotenv.load_dotenv()
 
 from brainage.dataset.dataset2d import SliceDataset
 
+# TODO upload checkpoints
+# TODO 
 class AgeModel2DSlices(pl.LightningModule):
 
     def __init__(self,
