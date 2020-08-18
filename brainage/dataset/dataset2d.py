@@ -13,7 +13,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as AbstractDataset
 dotenv.load_dotenv()
 
-
 class SliceDataset(AbstractDataset):
 
     def __init__(self,
@@ -63,7 +62,7 @@ class SliceDataset(AbstractDataset):
     def __getitem__(self, i):
         # subject
         key = self.info.iloc[i]['key']
-        sl = self.info.iloc[i]['slice']
+        sl = self.info.iloc[i]['position']
         pos = self.info.iloc[i].name
         img = self.ds[i] if self.preload else self.ds[pos]
         img = img.astype(np.float32)
@@ -72,7 +71,7 @@ class SliceDataset(AbstractDataset):
 
         sample = {'data':  img[np.newaxis, np.newaxis, :, :],
                   'label': self.info.iloc[i][self.labels].tolist(),
-                  'slice': sl,
+                  'position': sl,
                   'key':   key}
 
         # data augmentation
