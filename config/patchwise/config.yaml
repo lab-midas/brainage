@@ -1,0 +1,42 @@
+hydra:
+  run:
+    dir: ${env:OUT}/${project.name}/${project.job}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+defaults:
+  - dataset: lr
+
+project:
+  name: brainage
+  job: patchwise
+
+trainer:
+  gpus: 1
+  max_epochs: 100
+  benchmark: True
+  #limit_train_batches: 0.1
+  #limit_val_batches: 0.1
+  #limit_val_batches: 0.25
+  val_check_interval: 0.5
+
+model:
+  norm: IN
+  inputs: 1
+  outputs: 2
+  loss: 'l2'
+  depth: 18
+  use_layer: 4
+  no_max_pool: True
+  strides: [1,1,1,1]
+  heteroscedastic: True
+  position: True
+
+optimizer:
+  learning_rate: 1e-4
+  weight_decay: 0.0
+
+loader:
+  batch_size: 16
+  num_workers: 8
+
+
+
