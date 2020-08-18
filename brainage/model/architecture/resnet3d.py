@@ -149,12 +149,15 @@ class ResNet(nn.Module):
                  block_inplanes,
                  n_input_channels=3,
                  conv1_t_size=7,
-                 conv1_t_stride=1,
+                 conv1_t_stride=2,
                  no_max_pool=False,
                  shortcut_type='B',
                  norm_type='BN',
                  widen_factor=1.0,
-                 n_classes=400):
+                 n_classes=400,
+                 use_layer=[1,1,1,1],
+                 strides=[1,2,2,2],
+                 use_position=False):
         super().__init__()
 
 
@@ -175,27 +178,46 @@ class ResNet(nn.Module):
         self.bn1 = VarNorm3d(self.in_planes, self.norm_type)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool3d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, block_inplanes[0], layers[0],
-                                       shortcut_type)
-        self.layer2 = self._make_layer(block,
-                                       block_inplanes[1],
-                                       layers[1],
-                                       shortcut_type,
-                                       stride=2)
-        self.layer3 = self._make_layer(block,
-                                       block_inplanes[2],
-                                       layers[2],
-                                       shortcut_type,
-                                       stride=2)
-        self.layer4 = self._make_layer(block,
-                                       block_inplanes[3],
-                                       layers[3],
-                                       shortcut_type,
-                                       stride=2)
+
+        self.use_layer = use_layer 
+
+        if self.use_layer == 1:
+            self.layer1 = self._make_layer(block, 
+                                        block_inplanes[0], 
+                                        layers[0],
+                                        shortcut_type,
+                                        stride=1)
+        if self.use_layer == 2:
+            self.layer2 = self._make_layer(block,
+                                        block_inplanes[1],
+                                        layers[1],
+                                        shortcut_type,
+                                        stride=1)
+        
+        if self.use_layer == 3:
+            self.layer3 = self._make_layer(block,
+                                        block_inplanes[2],
+                                        layers[2],
+                                        shortcut_type,
+                                        stride=1)
+        
+        if self.use_layer == 4:
+            self.layer4 = self._make_layer(block,
+                                        block_inplanes[3],
+                                        layers[3],
+                                        shortcut_type,
+                                        stride=1)
 
         self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        self.fc = nn.Linear(block_inplanes[3] * block.expansion, n_classes)
 
+        # include patch position ?
+        self.use_position = use_position
+        add_pos_features = 3 if self.use_position else 0
+        self.fc = nn.Linear(block_inplanes[self.use_layer-1] * block.expansion + add_pos_features, n_classes)
+
+        # grad cam
+        self.gradients = None
+        
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
                 nn.init.kaiming_normal_(m.weight,
@@ -242,25 +264,32 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, pos=None, hook=False):
+        # extract features
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
         if not self.no_max_pool:
             x = self.maxpool(x)
-
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
+        if self.use_layer == 1:
+            x = self.layer1(x)
+        if self.use_layer == 2:
+            x = self.layer2(x)
+        if self.use_layer == 3:
+            x = self.layer3(x)
+        if self.use_layer == 4:
+            x = self.layer4(x)
         # register the hook
-        #h = x.register_hook(self.activations_hook)
+        if hook:
+            x.register_hook(self.activations_hook)
+        # pooling and flatten
         x = self.avgpool(x)
-
         x = x.view(x.size(0), -1)
+        # if given, include slice position
+        if self.use_position: 
+            x = torch.cat([x, pos.flatten(start_dim=1)], dim=1)
+        # fully connected part
         x = self.fc(x)
-
         return x
 
     # hook for the gradients of the activations
@@ -279,16 +308,21 @@ class ResNet(nn.Module):
         if not self.no_max_pool:
             x = self.maxpool(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        if self.use_layer == 1:
+            x = self.layer1(x)
+        if self.use_layer == 2:
+            x = self.layer2(x)
+        if self.use_layer == 3:
+            x = self.layer3(x)
+        if self.use_layer == 4:
+            x = self.layer4(x)
         return x
 
 def generate_model(model_depth, **kwargs):
     assert model_depth in [10, 18, 34, 50, 101, 152, 200]
 
     if model_depth == 10:
+        model = ResNet(BasicBlock, [1, 1, 1, 1], get_inplanes(), **kwargs)
         model = ResNet(BasicBlock, [1, 1, 1, 1], get_inplanes(), **kwargs)
     elif model_depth == 18:
         model = ResNet(BasicBlock, [2, 2, 2, 2], get_inplanes(), **kwargs)
