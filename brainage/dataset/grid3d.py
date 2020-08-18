@@ -3,13 +3,10 @@ import time
 from pathlib import Path
 from collections import deque, defaultdict
 
-import nibabel
 import h5py
 import zarr
 import torch
-import zarr
 import tracemalloc
-import nibabel as nib
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader, IterableDataset
@@ -177,7 +174,7 @@ class GridPatchSampler(IterableDataset):
         # read image data for each subject in subject_keys
         reader = self.ReaderClass(self.data_path)
         self.data_shape = reader.get_data_shape(self.subject_keys, self.image_group)
-        self.data_affine = reader.get_data_attribute(self.subject_keys, self.image_group, "affine")
+        self.data_affine = reader.get_data_attribute(self.subject_keys, self.image_group, 'affine')
         self.data_generator = reader.read_data_to_memory(self.subject_keys, self.image_group, dtype=np.float16)
         reader.close()
     
@@ -185,16 +182,16 @@ class GridPatchSampler(IterableDataset):
         """Assembles the processed patches to the original array shape.
         
         Args:
-            sample (dict): 'subject_key', 'pos', 'data' (C,H,W,D) for each patch  
+            sample (dict): 'key', 'position', 'data' (C,H,W,D) for each patch  
         """
-        for i, key in enumerate(sample['subject_key']):
+        for i, key in enumerate(sample['key']):
             # crop patch overlap
             cropped_patch = np.array(sample['data'][i, :,
                                                     self.patch_overlap[0]:-self.patch_overlap[1],
                                                     self.patch_overlap[1]:-self.patch_overlap[1],
                                                     self.patch_overlap[2]:-self.patch_overlap[2]])
             # start and end position
-            pos = np.array(sample['pos'][i])
+            pos = np.array(sample['position'][i])
             pos_end = np.array(pos + np.array(cropped_patch.shape[1:]))
             # check if end position is outside the original array (due to padding)
             # -> crop again (overhead)
@@ -206,7 +203,7 @@ class GridPatchSampler(IterableDataset):
             ds_shape = np.array(self.data_shape[key])
             ds_shape[0] = self.out_channels
             ds = self.results.require_dataset(key, ds_shape, self.out_dtype)
-            ds.attrs["affine"] = np.array(self.data_affine[key]).tolist()
+            ds.attrs['affine'] = np.array(self.data_affine[key]).tolist()
             ds[:, pos[0]:pos_end[0],
                   pos[1]:pos_end[1],
                   pos[2]:pos_end[2]] = cropped_patch[:, :new_patch_size[0],
@@ -238,8 +235,8 @@ class GridPatchSampler(IterableDataset):
                 sample, self.patch_size, self.patch_overlap, **self.pad_args)
             for patch, idx, count in patch_generator:
                 patch_dict = {'data': patch[: , :, :, :],
-                              'subject_key': subject_key,
-                              'pos': idx,
+                              'key': subject_key,
+                              'position': idx,
                               'count': count}
                 yield patch_dict
 
