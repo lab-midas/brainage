@@ -9,8 +9,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from omegaconf import OmegaConf
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.loggers import NeptuneLogger
 from dotenv import load_dotenv
 
 from batchgenerators.transforms.color_transforms import GammaTransform
@@ -35,6 +36,10 @@ def main(cfg):
     infocolumn = cfg.dataset.column
     train_set = cfg.dataset.train
     val_set = cfg.dataset.val
+    debug_set = cfg.dataset.debug or None
+    if debug_set:
+        train_set = debug_set
+        val_set = debug_set
     patch_size = cfg.dataset.patch_size
     data_mode = cfg.dataset.mode 
     data_augmentation = cfg.dataset.data_augmentation
@@ -42,12 +47,18 @@ def main(cfg):
     crop_margins = np.array(cfg.dataset.crop_margins)
     gamma_range = cfg.dataset.gamma_range 
     preload = cfg.dataset.preload
+    seed = cfg.project.seed or 42
+    seed_everything(seed)
     ts = time.gmtime()
-    job_id = time.strftime("%Y-%m-%d-%H-%M-%S", ts)
+    job_id = time.strftime("%Y-%m-%d-%H-%M-%S", ts) + f'-{cfg.dataset.fold}'
 
     # logging
     wandb_logger = WandbLogger(name=f'{job}-{job_id}', project=project, log_model=True)
-
+    #neptune_logger = NeptuneLogger(project_name=f'lab-midas/{project}',
+    #                               params=OmegaConf.to_container(cfg, resolve=True),
+    #                               experiment_name=f'{job}-{job_id}',
+    #                               tags=[job])
+    
     # get keys and metadata
     train_keys = [l.strip() for l in Path(train_set).open().readlines()]
     val_keys = [l.strip() for l in Path(val_set).open().readlines()]
@@ -114,7 +125,7 @@ def main(cfg):
     model = AgeModel3DVolume(OmegaConf.to_container(cfg, resolve=True),
                      ds_train, ds_val)
 
-    trainer = Trainer(logger=wandb_logger,
+    trainer = Trainer(logger=[wandb_logger],
                       **OmegaConf.to_container(cfg.trainer))
     trainer.fit(model)
 

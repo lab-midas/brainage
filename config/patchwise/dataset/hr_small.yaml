@@ -1,0 +1,14 @@
+dataset:
+  mode: patchwise
+  data: ${env:DATA}/nako/interim/t1_pp_10_cropped.h5
+  group: image
+  info: ${env:DATA}/nako/interim/nako_age_labels.csv
+  column: age
+  preload: True
+  fold: 0
+  train: ${env:DATA}/nako/interim/keys/train${dataset.fold}.dat
+  val:   ${env:DATA}/nako/interim/keys/test${dataset.fold}.dat
+  #debug: ${env:DATA}/nako/interim/keys/debug1.dat
+  data_augmentation: True
+  gamma_range: [0.7, 1.3]
+  patch_size: [48, 48, 48]

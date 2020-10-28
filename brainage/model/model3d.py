@@ -107,7 +107,7 @@ class AgeModel3DVolume(pl.LightningModule):
         avg_mae = torch.stack([x['mae'] for x in outputs]).mean()
         avg_mse = torch.stack([x['mse'] for x in outputs]).mean()
         logs = {'val_loss': avg_loss, 'mae': avg_mae, 'mse': avg_mse}
-        return {'val_loss': avg_loss, 'log': logs}
+        return {'val_loss': avg_loss, 'log': logs, 'progress_bar': logs}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)

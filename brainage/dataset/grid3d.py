@@ -202,7 +202,7 @@ class GridPatchSampler(IterableDataset):
             # add the patch to the corresponing entry in the result container
             ds_shape = np.array(self.data_shape[key])
             ds_shape[0] = self.out_channels
-            ds = self.results.require_dataset(key, ds_shape, self.out_dtype)
+            ds = self.results.require_dataset(key, shape=ds_shape, chunks=False, dtype=self.out_dtype)
             ds.attrs['affine'] = np.array(self.data_affine[key]).tolist()
             ds[:, pos[0]:pos_end[0],
                   pos[1]:pos_end[1],

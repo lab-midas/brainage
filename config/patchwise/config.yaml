@@ -1,6 +1,8 @@
 hydra:
   run:
     dir: ${env:OUT}/${project.name}/${project.job}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${env:OUT}/${project.name}/${project.job}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
 defaults:
   - dataset: lr
@@ -8,15 +10,18 @@ defaults:
 project:
   name: brainage
   job: patchwise
+  seed: 42
 
 trainer:
   gpus: 1
-  max_epochs: 100
+  max_epochs: 250
   benchmark: True
+  deterministic: True
   #limit_train_batches: 0.1
   #limit_val_batches: 0.1
   #limit_val_batches: 0.25
-  val_check_interval: 0.5
+  val_check_interval: 1.0
+  early_stop_callback: False
 
 model:
   norm: IN
@@ -24,9 +29,9 @@ model:
   outputs: 2
   loss: 'l2'
   depth: 18
-  use_layer: 4
+  use_layer: 3
   no_max_pool: True
-  strides: [1,1,1,1]
+  strides: [1,1,1,2]
   heteroscedastic: True
   position: True
 
